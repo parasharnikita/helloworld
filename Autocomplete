@@ -1,0 +1,66 @@
+import * as React from 'react';
+import TextField from '@mui/material/TextField';
+import Autocomplete from '@mui/material/Autocomplete';
+import { useVirtualizer } from '@mui/base/VirtualScroller';
+
+// ListboxComponent as a separate function
+const ListboxComponent = React.forwardRef(function ListboxComponent(props, ref) {
+    const { children, ...other } = props;
+    const itemData = React.Children.toArray(children);
+    const rowVirtualizer = useVirtualizer({
+        count: itemData.length,
+        getScrollElement: () => ref.current,
+        estimateSize: () => 48,
+        overscanCount: 5,
+    });
+
+    return (
+        <ul ref={ref} {...other}>
+            <div
+                style={{
+                    height: `${rowVirtualizer.getTotalSize()}px`,
+                    width: '100%',
+                    position: 'relative',
+                }}
+            >
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => (
+                    <div
+                        key={virtualRow.index}
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: `${virtualRow.size}px`,
+                            transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                    >
+                        {itemData[virtualRow.index]}
+                    </div>
+                ))}
+            </div>
+        </ul>
+    );
+});
+
+function VirtualizedAutocomplete() {
+    const data = Array.from(new Array(10000)).map((_, index) => `Option ${index + 1}`);
+  
+    return (
+        <Autocomplete
+            id="virtualized-autocomplete"
+            disableListWrap
+            options={data}
+            renderInput={(params) => <TextField {...params} label="Choose an option" />}
+            ListboxComponent={ListboxComponent}
+        />
+    );
+}
+
+export default function App() {
+    return (
+        <div style={{ width: 300, margin: 'auto', marginTop: 50 }}>
+            <VirtualizedAutocomplete />
+        </div>
+    );
+}
