@@ -1,20 +1,25 @@
 import React from 'react';
-import { useAutocomplete } from '@mui/base';
-import { TextField, Popper, Paper, ListSubheader } from '@mui/material';
+import { Autocomplete, TextField, Popper, ListSubheader } from '@mui/material';
 import { VariableSizeList } from 'react-window';
-import { makeStyles } from '@mui/styles';
+import { makeStyles, styled } from '@mui/styles';
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles({
   listbox: {
-    boxSizing: 'border-box',
     '& ul': {
       padding: 0,
       margin: 0,
     },
   },
-}));
+});
 
 const LISTBOX_PADDING = 8; // px
+
+const OuterElementContext = React.createContext({});
+
+const OuterElementType = React.forwardRef((props, ref) => {
+  const outerProps = React.useContext(OuterElementContext);
+  return <div ref={ref} {...props} {...outerProps} />;
+});
 
 function renderRow(props) {
   const { data, index, style } = props;
@@ -29,23 +34,6 @@ function renderRow(props) {
       {dataSet[1]}
     </div>
   );
-}
-
-const OuterElementContext = React.createContext({});
-
-const OuterElementType = React.forwardRef((props, ref) => {
-  const outerProps = React.useContext(OuterElementContext);
-  return <div ref={ref} {...props} {...outerProps} />;
-});
-
-function useResetCache(data) {
-  const ref = React.useRef(null);
-  React.useEffect(() => {
-    if (ref.current != null) {
-      ref.current.resetAfterIndex(0, true);
-    }
-  }, [data]);
-  return ref;
 }
 
 const ListboxComponent = React.forwardRef(function ListboxComponent(props, ref) {
@@ -68,7 +56,12 @@ const ListboxComponent = React.forwardRef(function ListboxComponent(props, ref) 
 
   const getItemSize = (index) => getChildSize(itemData[index]);
 
-  const gridRef = useResetCache(itemCount);
+  const gridRef = React.useRef(null);
+  React.useEffect(() => {
+    if (gridRef.current != null) {
+      gridRef.current.resetAfterIndex(0, true);
+    }
+  }, [itemCount]);
 
   return (
     <div ref={ref}>
@@ -91,45 +84,33 @@ const ListboxComponent = React.forwardRef(function ListboxComponent(props, ref) 
   );
 });
 
-function VirtualizedAutocomplete() {
+const StyledPopper = styled(Popper)(({ theme }) => ({
+  [`& .${autocompleteClasses.listbox}`]: {
+    boxSizing: 'border-box',
+    '& ul': {
+      padding: 0,
+      margin: 0,
+    },
+  },
+}));
+
+const VirtualizedAutocomplete = () => {
   const classes = useStyles();
-  const {
-    getRootProps,
-    getInputLabelProps,
-    getInputProps,
-    getListboxProps,
-    getOptionProps,
-    groupedOptions,
-    value,
-    focused,
-    setAnchorEl,
-  } = useAutocomplete({
-    id: 'virtualized-autocomplete',
-    options: top100Films,
-    getOptionLabel: (option) => option.title,
-  });
 
   return (
-    <div {...getRootProps()}>
-      <TextField
-        label="Virtualized Autocomplete"
-        variant="outlined"
-        InputLabelProps={getInputLabelProps()}
-        InputProps={getInputProps()}
-        fullWidth
-      />
-      <Popper open={focused} anchorEl={setAnchorEl.current} className={classes.listbox}>
-        <Paper>
-          <ListboxComponent {...getListboxProps()}>
-            {groupedOptions.map((option, index) => (
-              <li {...getOptionProps({ option, index })}>{option.title}</li>
-            ))}
-          </ListboxComponent>
-        </Paper>
-      </Popper>
-    </div>
+    <Autocomplete
+      id="virtualized-autocomplete"
+      disableListWrap
+      PopperComponent={StyledPopper}
+      ListboxComponent={ListboxComponent}
+      options={top100Films}
+      getOptionLabel={(option) => option.title}
+      renderInput={(params) => <TextField {...params} label="Virtualized Autocomplete" variant="outlined" fullWidth />}
+      renderOption={(props, option, state) => [props, option.title]}
+      style={{ width: 300 }}
+    />
   );
-}
+};
 
 // Example data for autocomplete
 const top100Films = [
