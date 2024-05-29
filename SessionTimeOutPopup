@@ -1,0 +1,51 @@
+import React, { useEffect, useState } from 'react';
+import { Snackbar, Slide, Button } from '@mui/material';
+
+const TransitionUp = (props) => {
+  return <Slide {...props} direction="up" />;
+};
+
+const SessionExpirySnackbar = ({ expiryTime }) => {
+  const [open, setOpen] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(60); // Assuming expiryTime is in seconds
+
+  useEffect(() => {
+    if (expiryTime <= 60) {
+      setOpen(true);
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setOpen(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [expiryTime]);
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  return (
+    <Snackbar
+      open={open}
+      onClose={handleClose}
+      TransitionComponent={TransitionUp}
+      message={`Your session is about to expire in ${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}.`}
+      action={
+        <Button color="secondary" size="small" onClick={handleClose}>
+          OK
+        </Button>
+      }
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+    />
+  );
+};
+
+export default SessionExpirySnackbar;
