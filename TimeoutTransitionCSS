@@ -1,0 +1,81 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #fff;
+}
+
+.outer-circle, .mid-circle, .inner-circle, .small-circle, .clock-needle {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.5s ease, transform 1s ease;
+}
+
+.outer-circle {
+    width: 300px;
+    height: 300px;
+    background-color: #FAE1A4;
+    animation: appear 0.5s forwards;
+}
+
+.mid-circle {
+    width: 200px;
+    height: 200px;
+    background-color: #FACC74;
+    animation: appear 0.5s 0.5s forwards;
+}
+
+.inner-circle {
+    width: 100px;
+    height: 100px;
+    background-color: #FAAD14;
+    border: 2px solid #DA8806;
+    animation: appear 0.5s 1s forwards;
+}
+
+.clock-needle {
+    width: 4px;
+    height: 40px;
+    background-color: white;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: move-needle 1s 1.5s forwards;
+}
+
+.small-circle {
+    width: 10px;
+    height: 10px;
+    background-color: #FFC53D;
+    animation: appear 0.5s 2s forwards;
+}
+
+.small-circle-1 {
+    top: 10%;
+    left: 20%;
+}
+
+.small-circle-2 {
+    top: 50%;
+    left: 10%;
+}
+
+.small-circle-3 {
+    top: 80%;
+    left: 30%;
+}
+
+@keyframes appear {
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes move-needle {
+    to {
+        top: 50%;
+        transform: translate(-50%, -50%) rotate(90deg);
+    }
+}
