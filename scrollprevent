@@ -1,0 +1,150 @@
+To prevent the list from scrolling back to the top when an option is selected in the virtualized multi-select autocomplete, you need to manage the scroll position manually. One way to achieve this is by keeping track of the current scroll position and ensuring it remains consistent after an option is selected. Here's how you can modify the code to achieve this:
+
+1. **Capture the scroll position** when an option is clicked.
+2. **Restore the scroll position** after the state update.
+
+Here's the updated code:
+
+```jsx
+import React, { useMemo, useState, useRef } from 'react';
+import { Autocomplete, TextField, Checkbox, ListItemText } from '@mui/material';
+import { VariableSizeList } from 'react-window';
+import { useTheme } from '@emotion/react';
+
+// Fake data for the example
+const items = Array.from(new Array(1000)).map((_, index) => `Item ${index + 1}`);
+
+const LISTBOX_PADDING = 8; // px
+
+function renderRow(props) {
+  const { data, index, style } = props;
+  return React.cloneElement(data[index], {
+    style: {
+      ...style,
+      top: style.top + LISTBOX_PADDING,
+    },
+  });
+}
+
+const OuterElementContext = React.createContext({});
+
+const OuterElementType = React.forwardRef((props, ref) => {
+  const outerProps = React.useContext(OuterElementContext);
+  return <div ref={ref} {...props} {...outerProps} />;
+});
+
+function useResetCache(data) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    if (ref.current != null) {
+      ref.current.resetAfterIndex(0, true);
+    }
+  }, [data]);
+  return ref;
+}
+
+// Adapter for react-window
+const ListboxComponent = React.forwardRef(function ListboxComponent(props, ref) {
+  const { children, ...other } = props;
+  const itemData = React.Children.toArray(children);
+  const theme = useTheme();
+  const itemCount = itemData.length;
+  const itemSize = 36;
+
+  const getHeight = () => {
+    if (itemCount > 8) {
+      return 8 * itemSize;
+    }
+    return itemData.length * itemSize;
+  };
+
+  const gridRef = useResetCache(itemCount);
+
+  return (
+    <div ref={ref}>
+      <OuterElementContext.Provider value={other}>
+        <VariableSizeList
+          ref={gridRef}
+          height={getHeight() + LISTBOX_PADDING * 2}
+          width="100%"
+          itemSize={() => itemSize}
+          outerElementType={OuterElementType}
+          innerElementType="ul"
+          itemCount={itemCount}
+          overscanCount={5}
+          itemData={itemData}
+        >
+          {renderRow}
+        </VariableSizeList>
+      </OuterElementContext.Provider>
+    </div>
+  );
+});
+
+function VirtualizedMultiSelectAutocomplete() {
+  const [selectedItems, setSelectedItems] = useState([]);
+  const listRef = useRef(null);
+
+  const handleChange = (event, value) => {
+    const scrollOffset = listRef.current ? listRef.current.scrollTop : 0;
+    setSelectedItems(value);
+
+    // Restore the scroll position after the state is updated
+    if (listRef.current) {
+      listRef.current.scrollTop = scrollOffset;
+    }
+  };
+
+  const onListboxOpen = () => {
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollTop;
+    }
+  };
+
+  return (
+    <Autocomplete
+      multiple
+      disableListWrap
+      ListboxComponent={ListboxComponent}
+      options={items}
+      getOptionLabel={(option) => option}
+      renderInput={(params) => <TextField {...params} label="Virtualized Multi-Select" />}
+      renderOption={(props, option, { selected }) => (
+        <li {...props}>
+          <Checkbox
+            checked={selected}
+            style={{ marginRight: 8 }}
+          />
+          <ListItemText primary={option} />
+        </li>
+      )}
+      value={selectedItems}
+      onChange={handleChange}
+      onOpen={onListboxOpen}
+      style={{ width: 300 }}
+      PopperComponent={(props) => (
+        <div {...props} ref={listRef} />
+      )}
+    />
+  );
+}
+
+export default VirtualizedMultiSelectAutocomplete;
+```
+
+### Changes Explained:
+
+1. **`useRef` Hook**:
+   - A `useRef` hook is added to keep a reference to the list container (`listRef`).
+
+2. **`handleChange`**:
+   - Captures the current scroll position (`scrollTop`) before updating the state.
+   - After updating the selected items, the scroll position is restored.
+
+3. **`onListboxOpen`**:
+   - Ensures the scroll position is maintained when the listbox is opened.
+
+4. **`PopperComponent`**:
+   - The `PopperComponent` is overridden to include the `listRef` reference. This ensures that the list container is accessible for capturing and restoring the scroll position.
+
+This way, when you select an option, the scroll position is preserved, and the list does not scroll back to the top.
