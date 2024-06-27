@@ -1,0 +1,139 @@
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { Autocomplete, TextField, Checkbox, ListItemText } from '@mui/material';
+import { VariableSizeList } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
+
+// Sample data
+const options = Array.from({ length: 1000 }).map((_, index) => ({
+  label: `Option ${index + 1}`,
+  value: index + 1,
+}));
+
+const LISTBOX_PADDING = 8; // px
+
+// Component for rendering each row in the list
+const renderRow = ({ data, index, style }) => {
+  const { options, selectedOptions, handleToggle, getItemSize } = data;
+  const option = options[index];
+
+  const rowRef = useRef(null);
+
+  useEffect(() => {
+    if (rowRef.current) {
+      getItemSize(index, rowRef.current.getBoundingClientRect().height);
+    }
+  }, [index, getItemSize]);
+
+  return (
+    <div ref={rowRef} style={{ ...style, top: style.top }}>
+      <li style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', boxSizing: 'border-box' }}>
+        <Checkbox
+          checked={selectedOptions.includes(option)}
+          onChange={() => handleToggle(option)}
+          value={option.value}
+          style={{ marginRight: 8 }}
+        />
+        <ListItemText primary={option.label} />
+      </li>
+    </div>
+  );
+};
+
+// Outer element type for VariableSizeList
+const OuterElementContext = React.createContext({});
+
+const OuterElementType = React.forwardRef((props, ref) => {
+  const outerProps = React.useContext(OuterElementContext);
+  return <div ref={ref} {...props} {...outerProps} />;
+});
+
+const useResetCache = (data) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (ref.current != null) {
+      ref.current.resetAfterIndex(0, true);
+    }
+  }, [data]);
+  return ref;
+};
+
+// Listbox component for Autocomplete
+const ListboxComponent = React.forwardRef(function ListboxComponent(props, ref) {
+  const { children, ...other } = props;
+  const itemData = React.Children.toArray(children);
+  const itemCount = itemData.length;
+  const [itemSizes, setItemSizes] = useState({});
+
+  const getItemSize = useCallback((index, size) => {
+    setItemSizes((prevSizes) => ({
+      ...prevSizes,
+      [index]: size,
+    }));
+  }, []);
+
+  const getHeight = () => {
+    const totalHeight = Object.values(itemSizes).reduce((acc, height) => acc + height, 0);
+    return Math.min(totalHeight, 8 * 46); // 8 items maximum viewable
+  };
+
+  const getChildSize = (index) => itemSizes[index] || 46;
+
+  const gridRef = useResetCache(itemCount);
+
+  return (
+    <div ref={ref}>
+      <AutoSizer disableHeight>
+        {({ width }) => (
+          <VariableSizeList
+            ref={gridRef}
+            height={getHeight() + 2 * LISTBOX_PADDING} // Add padding
+            width={width}
+            outerElementType={OuterElementType}
+            itemData={{ options: itemData, selectedOptions: [], handleToggle: () => {}, getItemSize }}
+            itemSize={getChildSize}
+            itemCount={itemCount}
+            overscanCount={5}
+          >
+            {renderRow}
+          </VariableSizeList>
+        )}
+      </AutoSizer>
+    </div>
+  );
+});
+
+const VirtualizedAutocomplete = () => {
+  const [selectedOptions, setSelectedOptions] = useState([]);
+
+  const handleToggle = (option) => {
+    setSelectedOptions((prevSelected) =>
+      prevSelected.includes(option)
+        ? prevSelected.filter((o) => o !== option)
+        : [...prevSelected, option]
+    );
+  };
+
+  return (
+    <Autocomplete
+      multiple
+      disableCloseOnSelect
+      ListboxComponent={ListboxComponent}
+      options={options}
+      renderInput={(params) => <TextField {...params} variant="outlined" label="Select Options" />}
+      getOptionLabel={(option) => option.label}
+      renderOption={(props, option, { selected }) => (
+        <li {...props}>
+          <Checkbox
+            checked={selectedOptions.includes(option)}
+            onChange={() => handleToggle(option)}
+            value={option.value}
+            style={{ marginRight: 8 }}
+          />
+          <ListItemText primary={option.label} />
+        </li>
+      )}
+    />
+  );
+};
+
+export default VirtualizedAutocomplete;
